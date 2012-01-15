@@ -1,0 +1,112 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta name="description" content="website description" />
+    <meta name="keywords" content="website keywords, website keywords" />
+    <meta http-equiv="content-type" content="text/html; charset=windows-1252" />
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+    <title>{{title}}</title>
+
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="./js/json2.js"></script>
+    <script type="text/javascript">
+
+        //
+        // As mentioned at http://en.wikipedia.org/wiki/XMLHttpRequest
+        //
+        if( !window.XMLHttpRequest ) XMLHttpRequest = function()
+        {
+            try{ return new ActiveXObject("Msxml2.XMLHTTP.6.0") }catch(e){}
+            try{ return new ActiveXObject("Msxml2.XMLHTTP.3.0") }catch(e){}
+            try{ return new ActiveXObject("Msxml2.XMLHTTP") }catch(e){}
+            try{ return new ActiveXObject("Microsoft.XMLHTTP") }catch(e){}
+            throw new Error("Could not find an XMLHttpRequest alternative.")
+        };
+
+        //
+        // Makes an AJAX request to a local server function w/ optional arguments
+        //
+        // functionName: the name of the server's AJAX function to call
+        // opt_argv: an Array of arguments for the AJAX function
+        //
+        function Request(function_name, opt_argv) {
+
+            if (!opt_argv)
+                opt_argv = new Array();
+
+            // Find if the last arg is a callback function; save it
+            var callback = null;
+            var len = opt_argv.length;
+            if (len > 0 && typeof opt_argv[len-1] == 'function') {
+                callback = opt_argv[len-1];
+                opt_argv.length--;
+            }
+            var async = (callback != null);
+
+            // Encode the arguments in to a URI
+            var query = 'action=' + encodeURIComponent(function_name);
+            for (var i = 0; i < opt_argv.length; i++) {
+                var key = 'arg' + i;
+                var val = JSON.stringify(opt_argv[i]);
+                query += '&' + key + '=' + encodeURIComponent(val);
+            }
+            query += '&time=' + new Date().getTime(); // IE cache workaround
+
+            // Create an XMLHttpRequest 'GET' request w/ an optional callback handler
+            var req = new XMLHttpRequest();
+            req.open('GET', '/rpc?' + query, async);
+
+            if (async) {
+                req.onreadystatechange = function() {
+                    if(req.readyState == 4 && req.status == 200) {
+                        var response = null;
+                        try {
+                            response = JSON.parse(req.responseText);
+                        } catch (e) {
+                            response = req.responseText;
+                        }
+                        callback(response);
+                    }
+                }
+            }
+
+            // Make the actual request
+            req.send(null);
+        }
+
+        // Adds a stub function that will pass the arguments to the AJAX call
+        function InstallFunction(obj, functionName) {
+            obj[functionName] = function() { Request(functionName, arguments); }
+        }
+
+    </script>
+    {% block base_header %}{% endblock %}
+
+</head>
+
+<body>
+<div id="main">
+    <div id="content_header">
+    </div>
+    <div id="site_content">
+        <div id="content">
+            <div id="logo">
+                <div id="logo_text">
+                    <!-- class="logo_colour", allows you to change the colour of the text -->
+                    <h1><a href="index.html">Bandzone<span class="logo_colour">SPY</span></a></h1>
+                    <h2>Simple. Contemporary. Website Template.</h2>
+                </div>
+            </div>
+            <!-- insert the page content here -->
+            {% block base_content %}{% endblock %}
+            <!-- END content-->
+        </div>
+    </div>
+    <div id="content_footer"></div>
+    <div id="footer">
+        Copyright &copy; simplestyle_1 | <a href="http://validator.w3.org/check?uri=referer">HTML5</a> | <a href="http://jigsaw.w3.org/css-validator/check/referer">CSS</a> | <a href="http://www.html5webtemplates.co.uk">design from HTML5webtemplates.co.uk</a>
+    </div>
+</div>
+</body>
+</html>

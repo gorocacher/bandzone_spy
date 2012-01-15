@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block base_header %}
+    <script type="text/javascript">
+
+        // Server object that will contain the callable methods
+        var server = {};
+
+        // Insert 'Search' as the name of a callable method
+        InstallFunction(server, 'Search');
+
+
+
+        // Client function that calls a server rpc and provides a callback
+        function doSearch() {
+            server.Search($('#search_field').val(), onSearchSuccess);
+        }
+
+        // Callback for after a successful doAdd
+        function onSearchSuccess(response) {
+            alert('got it');
+            $('#results').html(response);
+        }
+
+        // Define the entry point
+        $(document).ready(function()
+        {
+            $("#search_button").click(function() {
+                doSearch();
+                return false;
+            });
+
+        });
+
+    </script>
+{% endblock %}
+
+{% block base_content %}
+    <h1>Search Fans</h1>
+
+    <div id="search">
+        <div class="input"><input type="text" id="search_field" name="search_field" class="text" autocomplete="off"/></div>
+        <a id="search_button" title="Search Fans" href="#"><span>Search</span></a>
+    </div>
+    <div id="results">
+
+    </div>
+
+{% endblock %}
