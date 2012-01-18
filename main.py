@@ -11,9 +11,11 @@ from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
 from bzparser import BandzoneBandParser
 from bzdataprocessor import aggregate_by_address
+from cache import get_geocodes, store_geocode
 from google.appengine.api import urlfetch
 
 from google.appengine.ext.webapp import template
+from cache import get_geocodes
 
 
 template.register_template_library('templatetags.verbatim_templatetag')
@@ -85,12 +87,11 @@ class AsyncFanDownloader():
             rpc.wait()
 
         page_keys = chunks_dict.keys()
-        logging.debug('chunk dict keys:')
-        logging.debug(page_keys)
+
         data_list = []
         for key in page_keys:
             data_list= data_list + chunks_dict[key]
-        logging.debug([d.fullName for d in data_list])
+
         return data_list
 
 
@@ -107,13 +108,24 @@ class RPCMethods:
         totalPages = BandzoneBandParser().parseFanPageCount(urlfetch.fetch(url).content)
         fans = AsyncFanDownloader().asyncDonwload(url, 1)
 
-        results = aggregate_by_address(fans)
-        return [r.__dict__ for r in results]
+        resultMap = aggregate_by_address(fans)
+        cache = get_geocodes()
+        for c in cache:
+            address = c['address']
+            if resultMap.has_key(address):
+                resultMap[address].lat = c['lat']
+                resultMap[address].lng = c['lng']
+        logging.debug('To be returned: **********************************')
+        logging.debug([[address, r.lat, r.lng] for r in resultMap.values()])
+        return [r.__dict__ for r in resultMap.values()]
 
     def StoreCache(self, *args):
         cache = args[0]
         logging.debug("Cache received:")
         logging.debug(cache)
+        for i in cache:
+            store_geocode(i['address'], i['lat'], i['lng'])
+        logging.debug('Cache stored.')
 
 
 def main():

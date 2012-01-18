@@ -25,7 +25,7 @@ def aggregate_by_address(fans):
         info.fans.append(fan)
         info.count += 1;
 
-    result = []
+    result = {}
     for address in infos.keys():
         info = infos[address]
         tooltipSnippets = ["<tr><td><a href=\"http://www.bandzone.cz%s\" ><img src=\"%s\" /></a></td>" % (fan.profileUrl, fan.avatarUrl) +\
@@ -33,5 +33,5 @@ def aggregate_by_address(fans):
                            for fan in info.fans]
         info.tooltip = "<div>%s (%d)</div>" % (address, info.count) + "<table>" + reduce(lambda x,y: x + y, tooltipSnippets) + "</table>"
         delattr(info, 'fans')
-        result.append(info)
+        result[address] = info
     return result
