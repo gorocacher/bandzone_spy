@@ -90,8 +90,8 @@
 
             numCallbacks = locations.length;
             for (var i in locations) {
-                if (locations[i].city != null) {
-                    codeAddress(locations[i].city, locations[i].tooltip);
+                if (locations[i].address != null) {
+                    codeAddress(locations[i].address, locations[i].tooltip);
                 }
             }
 
@@ -154,14 +154,14 @@
     <div id="results" style="display: none; text-align: center;">
         <!--<table>
             <thead>
-                <tr><th>Avatar</th><th>Full Name</th><th>Profile Url</th><th>City</th></tr>
+                <tr><th>Avatar</th><th>Full Name</th><th>Profile Url</th><th>Address</th></tr>
             </thead>
             <tbody data-bind="foreach: fans">
                 <tr>
                     <td><img data-bind="attr: { src: avatarUrl }" /></td>
                     <td data-bind="text: fullName"></td>
                     <td data-bind="text: profileUrl"></td>
-                    <td data-bind="text: city"></td>
+                    <td data-bind="text: address"></td>
                 </tr>
             </tbody>
         </table>

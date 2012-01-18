@@ -17,21 +17,21 @@ class AddressInfo():
 def aggregate_by_address(fans):
     infos = {}
     for fan in fans:
-        if fan.city is None:
+        if fan.address is None:
             continue;
         if not infos.has_key(fan.address):
-            infos[fan.city] = AddressInfo(address = fan.address)
-        info = infos[fan.city]
+            infos[fan.address] = AddressInfo(address = fan.address)
+        info = infos[fan.address]
         info.fans.append(fan)
         info.count += 1;
 
     result = []
-    for city in infos.keys():
-        info = infos[city]
+    for address in infos.keys():
+        info = infos[address]
         tooltipSnippets = ["<tr><td><a href=\"http://www.bandzone.cz%s\" ><img src=\"%s\" /></a></td>" % (fan.profileUrl, fan.avatarUrl) +\
                            "<td><a href=\"http://www.bandzone.cz%s\" >%s</a></td></tr>\n" % ( fan.profileUrl, fan.fullName)\
                            for fan in info.fans]
-        info.tooltip = "<div>%s (%d)</div>" % (city, info.count) + "<table>" + reduce(lambda x,y: x + y, tooltipSnippets) + "</table>"
+        info.tooltip = "<div>%s (%d)</div>" % (address, info.count) + "<table>" + reduce(lambda x,y: x + y, tooltipSnippets) + "</table>"
         delattr(info, 'fans')
         result.append(info)
     return result
