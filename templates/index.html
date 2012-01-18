@@ -39,7 +39,8 @@
             var marker = new google.maps.Marker({
                 map: map,
                 position: latlng,
-                title: address
+                title: address,
+                draggable: true
             });
 
             google.maps.event.addListener(marker, 'click', function() {
@@ -51,25 +52,36 @@
                 infowindow.open(map,marker);
             });
         }
-        function codeAddress(address, content) {
-            geocoder.geocode( { 'address': address + ",Czech+Republic"}, function(results, status) {
-                if (status == google.maps.GeocoderStatus.OK) {
-                    var latlng = results[0].geometry.location;
-                    createMarker(address, content, latlng);
-                    locationCache.push({
-                        address: address,
-                        lat: latlng.lat(),
-                        lng: latlng.lng()
-                    });
-                } else {
-                    alert("Geocode was not successful for the following reason: " + status);
-                }
-                numCallbacks --;
-                if (numCallbacks == 0) {
-                    map.fitBounds(latlngbounds);
-                    doStoreCache(locationCache);
-                }
-            });
+
+        function afterCallbacks() {
+            numCallbacks --;
+            if (numCallbacks == 0) {
+                map.fitBounds(latlngbounds);
+                doStoreCache(locationCache);
+            }
+        }
+
+        function codeAddress(location) {
+            if ((location.lat != null) && (location.lng != null)) {
+                var latlng= new google.maps.LatLng(location.lat, location.lng);
+                createMarker(location.address, location.tooltip, latlng);
+                afterCallbacks();
+            }  else {
+                geocoder.geocode( { 'address': location.address }, function(results, status) {
+                    if (status == google.maps.GeocoderStatus.OK) {
+                        var latlng = results[0].geometry.location;
+                        createMarker(location.address, location.tooltip, latlng);
+                        locationCache.push({
+                            address: location.address,
+                            lat: latlng.lat(),
+                            lng: latlng.lng()
+                        });
+                    } else {
+                        //alert("Geocode was not successful for the following reason: " + status);
+                    }
+                    afterCallbacks();
+                });
+            }
 
         }
 
@@ -91,7 +103,7 @@
             numCallbacks = locations.length;
             for (var i in locations) {
                 if (locations[i].address != null) {
-                    codeAddress(locations[i].address, locations[i].tooltip);
+                    codeAddress(locations[i]);
                 }
             }
 
@@ -169,7 +181,7 @@
             ko.applyBindings(viewModel);
         </script>-->
 
-        <div id="map_canvas" style="width: 500px; height: 500px;">
+        <div id="map_canvas" style="width: 640px; height: 640px;">
     </div>
 
 

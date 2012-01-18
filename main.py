@@ -12,7 +12,7 @@ from google.appengine.ext.webapp import util
 from bzparser import BandzoneBandParser
 from bzdataprocessor import aggregate_by_address
 from cache import get_geocodes, store_geocode
-from google.appengine.api import urlfetch
+from google.appengine.api import urlfetch, memcache
 
 from google.appengine.ext.webapp import template
 from cache import get_geocodes
@@ -65,10 +65,12 @@ class RPCHandler(webapp.RequestHandler):
 
 class AsyncFanDownloader():
 
+
     def handle_result(self, rpc, page, storage):
         result = rpc.get_result()
         parser = BandzoneBandParser()
-        storage[page] = parser.parseFans(result.content)
+        results = parser.parseFans(result.content)
+        storage[page] = results
         logging.debug("Parsed fans for page %d:" % (page))
         logging.debug([f.fullName for f in storage[page]])
 
@@ -79,19 +81,30 @@ class AsyncFanDownloader():
         chunks_dict = {}
         rpcs = []
         for page in range(1, total_pages + 1):
-            rpc = urlfetch.create_rpc(deadline = 10)
-            rpc.callback = self.create_callback(rpc, page, chunks_dict)
-            urlfetch.make_fetch_call(rpc, url_template % page)
-            rpcs.append(rpc)
+            url = url_template % page
+
+            data = memcache.get(url)
+            if data is not None:
+                logging.debug("Using cache for '%s'. *********************" % url)
+                chunks_dict[page] = data
+            else:
+                rpc = urlfetch.create_rpc(deadline = 10)
+                rpc.callback = self.create_callback(rpc, page, chunks_dict)
+                urlfetch.make_fetch_call(rpc, url)
+                rpcs.append(rpc)
         for rpc in rpcs:
             rpc.wait()
 
         page_keys = chunks_dict.keys()
-
+        logging.debug("keys: ***************************")
+        logging.debug(page_keys)
         data_list = []
         for key in page_keys:
             data_list= data_list + chunks_dict[key]
+            memcache.add(url_template % key, chunks_dict[key], 30*60)
 
+        logging.debug("data_list: ***************************")
+        logging.debug([[i.fullName, i.address] for i in data_list])
         return data_list
 
 
@@ -106,7 +119,7 @@ class RPCMethods:
         bandid = args[0]
         url = "http://bandzone.cz/%s?fls=0&flp=%s" % (bandid, "%s")
         totalPages = BandzoneBandParser().parseFanPageCount(urlfetch.fetch(url).content)
-        fans = AsyncFanDownloader().asyncDonwload(url, 1)
+        fans = AsyncFanDownloader().asyncDonwload(url, totalPages)
 
         resultMap = aggregate_by_address(fans)
         cache = get_geocodes()
@@ -116,7 +129,7 @@ class RPCMethods:
                 resultMap[address].lat = c['lat']
                 resultMap[address].lng = c['lng']
         logging.debug('To be returned: **********************************')
-        logging.debug([[address, r.lat, r.lng] for r in resultMap.values()])
+        logging.debug([[r.address, r.lat, r.lng] for r in resultMap.values()])
         return [r.__dict__ for r in resultMap.values()]
 
     def StoreCache(self, *args):
