@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
+
+
 {% block base_header %}
+    <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?sensor=false"></script>
+
     <script type="text/javascript">
 
         // Server object that will contain the callable methods
@@ -8,8 +12,94 @@
 
         // Insert 'Search' as the name of a callable method
         InstallFunction(server, 'Search');
+        InstallFunction(server, 'StoreCache');
+
+        var viewModel = {
+            fans: ko.observableArray([])
+        };
 
 
+        var geocoder;
+        var map;
+        var infowindow;
+        var latlngbounds;
+
+        var locationCache = [];
+
+        function doStoreCache() {
+            server.StoreCache(locationCache);
+        }
+
+
+        var numCallbacks = 0;
+
+        function createMarker(address, tooltip, latlng) {
+            latlngbounds.extend( latlng );
+
+            var marker = new google.maps.Marker({
+                map: map,
+                position: latlng,
+                title: address
+            });
+
+            google.maps.event.addListener(marker, 'click', function() {
+                if (infowindow)
+                    infowindow.close();
+                infowindow = new google.maps.InfoWindow({
+                    content: tooltip
+                });
+                infowindow.open(map,marker);
+            });
+        }
+        function codeAddress(address, content) {
+            geocoder.geocode( { 'address': address + ",Czech+Republic"}, function(results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                    var latlng = results[0].geometry.location;
+                    createMarker(address, content, latlng);
+                    locationCache.push({
+                        address: address,
+                        lat: latlng.lat(),
+                        lng: latlng.lng()
+                    });
+                } else {
+                    alert("Geocode was not successful for the following reason: " + status);
+                }
+                numCallbacks --;
+                if (numCallbacks == 0) {
+                    map.fitBounds(latlngbounds);
+                    doStoreCache(locationCache);
+                }
+            });
+
+        }
+
+
+
+        function createMap(locations) {
+            locationCache = [];
+            geocoder = new google.maps.Geocoder();
+            var latlng = new google.maps.LatLng(50.08781, 14.42046);
+            var myOptions = {
+                zoom: 7,
+                center: latlng,
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+            map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+            latlngbounds = new google.maps.LatLngBounds( );
+
+            numCallbacks = locations.length;
+            for (var i in locations) {
+                if (locations[i].city != null) {
+                    codeAddress(locations[i].city, locations[i].tooltip);
+                }
+            }
+
+
+
+
+
+        }
 
         // Client function that calls a server rpc and provides a callback
         function doSearch() {
@@ -18,21 +108,37 @@
 
         // Callback for after a successful doAdd
         function onSearchSuccess(response) {
-            alert('got it');
-            $('#results').html(response);
+            viewModel.fans.removeAll();
+            /*for (var i in response) {
+                viewModel.fans.push(response[i]);
+            }*/
+
+            createMap(response);
+
+            $('#loader').hide();
+            $('#results').show();
         }
+
+
+
 
         // Define the entry point
         $(document).ready(function()
         {
+
             $("#search_button").click(function() {
+                $('#results').hide();
+                $('#loader').show();
                 doSearch();
                 return false;
             });
-
         });
 
+
+
     </script>
+
+
 {% endblock %}
 
 {% block base_content %}
@@ -42,7 +148,30 @@
         <div class="input"><input type="text" id="search_field" name="search_field" class="text" autocomplete="off"/></div>
         <a id="search_button" title="Search Fans" href="#"><span>Search</span></a>
     </div>
-    <div id="results">
+    <div id="loader" style="display: none;">
+        <img src="img/ajax-loader.gif" alt="loader"/>
+    </div>
+    <div id="results" style="display: none; text-align: center;">
+        <!--<table>
+            <thead>
+                <tr><th>Avatar</th><th>Full Name</th><th>Profile Url</th><th>City</th></tr>
+            </thead>
+            <tbody data-bind="foreach: fans">
+                <tr>
+                    <td><img data-bind="attr: { src: avatarUrl }" /></td>
+                    <td data-bind="text: fullName"></td>
+                    <td data-bind="text: profileUrl"></td>
+                    <td data-bind="text: city"></td>
+                </tr>
+            </tbody>
+        </table>
+        <script type="text/javascript">
+            ko.applyBindings(viewModel);
+        </script>-->
+
+        <div id="map_canvas" style="width: 500px; height: 500px;">
+    </div>
+
 
     </div>
 

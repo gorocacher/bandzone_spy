@@ -1,15 +1,22 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
+
 import os
 
 from django.utils import simplejson
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
-from BeautifulSoup import BeautifulSoup
+from bzparser import BandzoneBandParser
+from bzdataprocessor import aggregate_by_address
 from google.appengine.api import urlfetch
-import re
+
+from google.appengine.ext.webapp import template
+
+
+template.register_template_library('templatetags.verbatim_templatetag')
 
 def template_path(name):
     return os.path.join(os.path.dirname(__file__), 'templates/' + name)
@@ -56,45 +63,34 @@ class RPCHandler(webapp.RequestHandler):
 
 class AsyncFanDownloader():
 
-    def parse_fans(self, html):
-        soup = BeautifulSoup(html)
-        results = soup.find(id="snippet-fanList-fanList")
-        links = results.findAll(attrs={'title' : re.compile(u"Přejít na profil.*")})
-        items = []
-        for link in links:
-            item = link['href']
-            items.append(item)
-        return items
-
     def handle_result(self, rpc, page, storage):
         result = rpc.get_result()
-        storage[page] = self.parse_fans(result.content)
+        parser = BandzoneBandParser()
+        storage[page] = parser.parseFans(result.content)
+        logging.debug("Parsed fans for page %d:" % (page))
+        logging.debug([f.fullName for f in storage[page]])
 
     def create_callback(self, rpc, page, storage):
         return lambda: self.handle_result(rpc, page, storage)
 
-
-
     def asyncDonwload(self, url_template, total_pages):
         chunks_dict = {}
         rpcs = []
-        for page in range(1, total_pages):
+        for page in range(1, total_pages + 1):
             rpc = urlfetch.create_rpc(deadline = 10)
             rpc.callback = self.create_callback(rpc, page, chunks_dict)
             urlfetch.make_fetch_call(rpc, url_template % page)
             rpcs.append(rpc)
-            if page > total_pages:
-                break
-            else:
-                page = page +1
         for rpc in rpcs:
             rpc.wait()
 
         page_keys = chunks_dict.keys()
-        page_keys.sort()
+        logging.debug('chunk dict keys:')
+        logging.debug(page_keys)
         data_list = []
         for key in page_keys:
             data_list= data_list + chunks_dict[key]
+        logging.debug([d.fullName for d in data_list])
         return data_list
 
 
@@ -107,14 +103,21 @@ class RPCMethods:
         # The JSON encoding may have encoded integers as strings.
         # Be sure to convert args to any mandatory type(s).
         bandid = args[0]
-        url = "http://bandzone.cz/%s?fls=%s" % (bandid, "%s")
+        url = "http://bandzone.cz/%s?fls=0&flp=%s" % (bandid, "%s")
+        totalPages = BandzoneBandParser().parseFanPageCount(urlfetch.fetch(url).content)
+        fans = AsyncFanDownloader().asyncDonwload(url, 1)
 
-        items = AsyncFanDownloader().asyncDonwload(url, 10)
+        results = aggregate_by_address(fans)
+        return [r.__dict__ for r in results]
 
-        return items.__str__()
+    def StoreCache(self, *args):
+        cache = args[0]
+        logging.debug("Cache received:")
+        logging.debug(cache)
 
 
 def main():
+    logging.getLogger().setLevel(logging.DEBUG)
     app = webapp.WSGIApplication([
         ('/', MainPage),
         ('/rpc', RPCHandler),
