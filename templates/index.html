@@ -24,11 +24,13 @@
         var infowindow;
         var latlngbounds;
         var markersArray = [];
+        var oldMarkersArray = [];
         var locationCache = [];
         var numCallbacks = 0;
 
         function doStoreCache() {
             server.StoreCache(locationCache);
+            failedGeocodes = 0;
         }
 
         function createMarker(address, tooltip, latlng, proportion, zindex) {
@@ -43,7 +45,6 @@
                 map: map,
                 position: latlng,
                 title: address,
-                draggable: true,
                 zIndex: zindex,
                 icon: icon
             });
@@ -62,11 +63,14 @@
         function afterCallbacks() {
             numCallbacks --;
             if (numCallbacks == 0) {
-                map.fitBounds(latlngbounds);
+                //map.panToBounds(latlngbounds);
+                if (failedGeocodes > 0)
+                    alert('There was too many geocode request (' + failedGeocodes + '), therefore not all addresses will be displayed. Try again later.');
                 doStoreCache(locationCache);
             }
         }
 
+        var failedGeocodes = 0;
         function codeAddress(location) {
             if ((location.lat != null) && (location.lng != null)) {
                 var latlng= new google.maps.LatLng(location.lat, location.lng);
@@ -76,17 +80,20 @@
                 geocoder.geocode( { 'address': location.address }, function(results, status) {
                     if (status == google.maps.GeocoderStatus.OK) {
                         var latlng = results[0].geometry.location;
-                        alert('ahoj');
+
                         createMarker(location.address, location.tooltip,latlng, location.proportion, location.zindex);
                         locationCache.push({
                             address: location.address,
                             lat: latlng.lat(),
                             lng: latlng.lng()
                         });
+                        setTimeout("afterCallbacks()", 100);
                     } else {
-                        //alert("Geocode was not successful for the following reason: " + status);
+                        if (status != google.maps.GeocoderStatus.ZERO_RESULTS)
+                            failedGeocodes++;
+                        afterCallbacks();
+
                     }
-                    afterCallbacks();
                 });
             }
         }
@@ -94,17 +101,19 @@
         // Deletes all markers in the array by removing references to them
         function deleteOverlays() {
             if (markersArray) {
-                for (i in markersArray) {
-                    markersArray[i].setMap(null);
+                oldMarkersArray = markersArray;
+                markersArray = []
+                for (i in oldMarkersArray) {
+                    oldMarkersArray[i].setMap(null);
                 }
-                markersArray.length = 0;
+                oldMarkersArray = [];
             }
         }
 
         function createMap(locations) {
             locationCache = [];
             geocoder = new google.maps.Geocoder();
-            var latlng = new google.maps.LatLng(50.08781, 14.42046);
+            var latlng = new google.maps.LatLng(50.08781, 15.42046);
             var myOptions = {
                 zoom: 7,
                 center: latlng,
@@ -115,10 +124,11 @@
                 map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
             else {
                 deleteOverlays();
-
+                map.setOptions(myOptions);
             }
 
             latlngbounds = new google.maps.LatLngBounds( );
+            latlngbounds.extend(latlng);
 
             numCallbacks = locations.length;
             for (var i in locations) {

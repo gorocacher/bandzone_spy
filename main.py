@@ -119,7 +119,7 @@ class RPCMethods:
         bandid = args[0]
         url = "http://bandzone.cz/%s?fls=0&flp=%s" % (bandid, "%s")
         totalPages = BandzoneBandParser().parseFanPageCount(urlfetch.fetch(url).content)
-        fans = AsyncFanDownloader().asyncDonwload(url, 1)
+        fans = AsyncFanDownloader().asyncDonwload(url, totalPages)
 
         resultMap = aggregate_by_address(fans)
         cache = get_geocodes()
