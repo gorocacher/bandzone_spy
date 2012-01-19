@@ -28,15 +28,21 @@
         var notFoundCache = [];
         var numCallbacks = 0;
 
+        var cacheSizeLimit = 10;
+        function tryStoreCache() {
+            if ((locationCache.length >= cacheSizeLimit) || (notFoundCache.length >= cacheSizeLimit)) {
+                doStoreCache();
+            }
+        }
         function doStoreCache() {
             /** Since the cache is stored using GET requests, the data are sliced in order to fit in a single URL */
-            while(locationCache.length | notFoundCache.length) {
+            while(locationCache.length || notFoundCache.length) {
                 var locSlice = [];
                 var undefSlice = [];
                 if (locationCache.length)
-                    locSlice = locationCache.splice(0,25);
+                    locSlice = locationCache.splice(0,10);
                 if (notFoundCache.length)
-                    undefSlice = notFoundCache.splice(0,25);
+                    undefSlice = notFoundCache.splice(0,10);
 
                 server.StoreCache(locSlice, undefSlice);
             }
@@ -90,8 +96,6 @@
                 return;
             var location = locations[i];
 
-            //alert('codeAddress: ' + i);
-
             if ((location.lat != null) && (location.lng != null)) {
                 var latlng= new google.maps.LatLng(location.lat, location.lng);
                 createMarker(location.address, location.tooltip, latlng, location.proportion, location.zindex);
@@ -103,7 +107,7 @@
                     codeAddress(locations, i+1, notfound);
                     return;
                 }
-                var timeout = 400;
+
                 geocoder.geocode( { 'address': location.address }, function(results, status) {
                     if (status == google.maps.GeocoderStatus.OK) {
                         var latlng = results[0].geometry.location;
@@ -114,28 +118,26 @@
                             lat: latlng.lat(),
                             lng: latlng.lng()
                         });
-
-
-                        //afterCallbacks();
-                        //codeAddress(locations, i+1, notfound);
-                        /*setTimeout(function() {
-                                codeAddress(locations, i+1);
-                            },200);*/
+                        tryStoreCache();
                     } else {
                         if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
-                            failedGeocodes++;
-                            timeout = 0;
+                            // redo the current address  after 1s
+                            setTimeout(function() {
+                                codeAddress(locations, i);
+                            },1000);
+                            return;
                         } else if (status == google.maps.GeocoderStatus.ZERO_RESULTS) {
                             notFoundCache.push(location.address);
+                            tryStoreCache();
+                        } else {
+                            failedGeocodes++;
                         }
-                        //afterCallbacks();
-                        //alert("Geocode was not successful for the following reason: " + status);
-                        //codeAddress(locations, i+1, notfound);
                     }
                     afterCallbacks();
+                    // continue after 300ms
                     setTimeout(function() {
                         codeAddress(locations, i+1);
-                    },timeout);
+                    },200);
                 });
             }
         }
