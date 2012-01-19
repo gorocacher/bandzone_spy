@@ -119,17 +119,16 @@ class RPCMethods:
         bandid = args[0]
         url = "http://bandzone.cz/%s?fls=0&flp=%s" % (bandid, "%s")
         totalPages = BandzoneBandParser().parseFanPageCount(urlfetch.fetch(url).content)
-        fans = AsyncFanDownloader().asyncDonwload(url, totalPages)
+        fans = AsyncFanDownloader().asyncDonwload(url, 1)
 
         resultMap = aggregate_by_address(fans)
         cache = get_geocodes()
+        #Now merge the parsed address data and the geocode cache
         for c in cache:
             address = c['address']
             if resultMap.has_key(address):
                 resultMap[address].lat = c['lat']
                 resultMap[address].lng = c['lng']
-        logging.debug('To be returned: **********************************')
-        logging.debug([[r.address, r.lat, r.lng] for r in resultMap.values()])
         return [r.__dict__ for r in resultMap.values()]
 
     def StoreCache(self, *args):

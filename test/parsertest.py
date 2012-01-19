@@ -1,17 +1,15 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
-from google.appengine.api import urlfetch
-from main import AsyncFanDownloader
 
 __author__ = 'Keznikl'
+
+
+from bulkloader import fix_sys_path
+fix_sys_path()
 
 import unittest
 import os
 from bzparser import BandzoneBandParser, BandzoneFan
-
-from bulkloader import fix_sys_path
-
-fix_sys_path()
 from google.appengine.ext import testbed
 
 class ParseTestCase(unittest.TestCase):

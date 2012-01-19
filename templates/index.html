@@ -23,25 +23,31 @@
         var map;
         var infowindow;
         var latlngbounds;
-
+        var markersArray = [];
         var locationCache = [];
+        var numCallbacks = 0;
 
         function doStoreCache() {
             server.StoreCache(locationCache);
         }
 
-
-        var numCallbacks = 0;
-
-        function createMarker(address, tooltip, latlng) {
+        function createMarker(address, tooltip, latlng, proportion, zindex) {
             latlngbounds.extend( latlng );
+
+            var icon = new google.maps.MarkerImage('/img/marker.png');
+            icon.size = new google.maps.Size(20, 34);
+            icon.scaledSize = new google.maps.Size(proportion * icon.size.width, proportion * icon.size.height);
+            icon.size = icon.scaledSize
 
             var marker = new google.maps.Marker({
                 map: map,
                 position: latlng,
                 title: address,
-                draggable: true
+                draggable: true,
+                zIndex: zindex,
+                icon: icon
             });
+            markersArray.push(marker);
 
             google.maps.event.addListener(marker, 'click', function() {
                 if (infowindow)
@@ -64,13 +70,14 @@
         function codeAddress(location) {
             if ((location.lat != null) && (location.lng != null)) {
                 var latlng= new google.maps.LatLng(location.lat, location.lng);
-                createMarker(location.address, location.tooltip, latlng);
+                createMarker(location.address, location.tooltip, latlng, location.proportion, location.zindex);
                 afterCallbacks();
             }  else {
                 geocoder.geocode( { 'address': location.address }, function(results, status) {
                     if (status == google.maps.GeocoderStatus.OK) {
                         var latlng = results[0].geometry.location;
-                        createMarker(location.address, location.tooltip, latlng);
+                        alert('ahoj');
+                        createMarker(location.address, location.tooltip,latlng, location.proportion, location.zindex);
                         locationCache.push({
                             address: location.address,
                             lat: latlng.lat(),
@@ -82,10 +89,17 @@
                     afterCallbacks();
                 });
             }
-
         }
 
-
+        // Deletes all markers in the array by removing references to them
+        function deleteOverlays() {
+            if (markersArray) {
+                for (i in markersArray) {
+                    markersArray[i].setMap(null);
+                }
+                markersArray.length = 0;
+            }
+        }
 
         function createMap(locations) {
             locationCache = [];
@@ -96,7 +110,13 @@
                 center: latlng,
                 mapTypeId: google.maps.MapTypeId.ROADMAP
             };
-            map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+            if (map == null)
+                map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+            else {
+                deleteOverlays();
+
+            }
 
             latlngbounds = new google.maps.LatLngBounds( );
 
@@ -106,11 +126,6 @@
                     codeAddress(locations[i]);
                 }
             }
-
-
-
-
-
         }
 
         // Client function that calls a server rpc and provides a callback
@@ -131,9 +146,6 @@
             $('#results').show();
         }
 
-
-
-
         // Define the entry point
         $(document).ready(function()
         {
@@ -145,12 +157,7 @@
                 return false;
             });
         });
-
-
-
     </script>
-
-
 {% endblock %}
 
 {% block base_content %}
