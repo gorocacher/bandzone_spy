@@ -26,11 +26,11 @@
         var markersArray = [];
         var oldMarkersArray = [];
         var locationCache = [];
+        var notFoundCache = [];
         var numCallbacks = 0;
 
         function doStoreCache() {
-            server.StoreCache(locationCache);
-            failedGeocodes = 0;
+            server.StoreCache(locationCache, notFoundCache);
         }
 
         function createMarker(address, tooltip, latlng, proportion, zindex) {
@@ -64,19 +64,37 @@
             numCallbacks --;
             if (numCallbacks == 0) {
                 //map.panToBounds(latlngbounds);
-                if (failedGeocodes > 0)
+                doStoreCache();
+                $('#loader').hide();
+                if (failedGeocodes > 0)  {
                     alert('There was too many geocode request (' + failedGeocodes + '), therefore not all addresses will be displayed. Try again later.');
-                doStoreCache(locationCache);
+                    failedGeocodes = 0;
+                }
             }
         }
 
         var failedGeocodes = 0;
-        function codeAddress(location) {
+        function codeAddress(locations, i, notfound) {
+            if (i >= locations.length)
+                return;
+            var location = locations[i];
+
+            //alert('codeAddress: ' + i);
+
             if ((location.lat != null) && (location.lng != null)) {
                 var latlng= new google.maps.LatLng(location.lat, location.lng);
                 createMarker(location.address, location.tooltip, latlng, location.proportion, location.zindex);
                 afterCallbacks();
+                codeAddress(locations, i+1, notfound);
             }  else {
+                /*if ((notfound != null) && $.inArray(location.address, notfound)) {
+
+                    alert('previously not found: ' + location.address + )
+                    afterCallbacks();
+                    codeAddress(locations, i+1, notfound);
+                    return;
+                }*/
+
                 geocoder.geocode( { 'address': location.address }, function(results, status) {
                     if (status == google.maps.GeocoderStatus.OK) {
                         var latlng = results[0].geometry.location;
@@ -87,12 +105,22 @@
                             lat: latlng.lat(),
                             lng: latlng.lng()
                         });
-                        setTimeout("afterCallbacks()", 100);
-                    } else {
-                        if (status != google.maps.GeocoderStatus.ZERO_RESULTS)
-                            failedGeocodes++;
-                        afterCallbacks();
 
+
+                        afterCallbacks();
+                        codeAddress(locations, i+1, notfound);
+                        /*setTimeout(function() {
+                                codeAddress(locations, i+1);
+                            },200);*/
+                    } else {
+                        if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
+                            failedGeocodes++;
+                        } else if (status == google.maps.GeocoderStatus.ZERO_RESULTS) {
+                            notFoundCache.push(location.address);
+                        }
+                        afterCallbacks();
+                        //alert("Geocode was not successful for the following reason: " + status);
+                        codeAddress(locations, i+1, notfound);
                     }
                 });
             }
@@ -110,8 +138,9 @@
             }
         }
 
-        function createMap(locations) {
+        function createMap(locations, notfound) {
             locationCache = [];
+            notFoundCache = [];
             geocoder = new google.maps.Geocoder();
             var latlng = new google.maps.LatLng(50.08781, 15.42046);
             var myOptions = {
@@ -131,11 +160,12 @@
             latlngbounds.extend(latlng);
 
             numCallbacks = locations.length;
-            for (var i in locations) {
+            codeAddress(locations, 0, notfound);
+            /*for (var i in locations) {
                 if (locations[i].address != null) {
                     codeAddress(locations[i]);
                 }
-            }
+            }*/
         }
 
         // Client function that calls a server rpc and provides a callback
@@ -149,10 +179,10 @@
             /*for (var i in response) {
                 viewModel.fans.push(response[i]);
             }*/
+            alert("response: " + response.locations + ",\nnotfound: " + response.notfound);
+            createMap(response.locations, response.notfound);
 
-            createMap(response);
 
-            $('#loader').hide();
             $('#results').show();
         }
 

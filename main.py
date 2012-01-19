@@ -129,7 +129,10 @@ class RPCMethods:
             if resultMap.has_key(address):
                 resultMap[address].lat = c['lat']
                 resultMap[address].lng = c['lng']
-        return [r.__dict__ for r in resultMap.values()]
+        return {
+            'locations': [r.__dict__ for r in resultMap.values()],
+            'notfound': []
+            }
 
     def StoreCache(self, *args):
         cache = args[0]
