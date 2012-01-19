@@ -11,7 +11,7 @@ from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
 from bzparser import BandzoneBandParser
 from bzdataprocessor import aggregate_by_address
-from cache import get_geocodes, store_geocode
+from cache import get_geocodes, store_geocode, store_notfound_address, get_notfound_addresses
 from google.appengine.api import urlfetch, memcache
 
 from google.appengine.ext.webapp import template
@@ -131,16 +131,22 @@ class RPCMethods:
                 resultMap[address].lng = c['lng']
         return {
             'locations': [r.__dict__ for r in resultMap.values()],
-            'notfound': []
+            'notfound': get_notfound_addresses()
             }
 
     def StoreCache(self, *args):
         cache = args[0]
+        notfound= args[1]
         logging.debug("Cache received:")
         logging.debug(cache)
+        logging.debug("Notfound received:")
+        logging.debug(notfound)
+
         for i in cache:
             store_geocode(i['address'], i['lat'], i['lng'])
-        logging.debug('Cache stored.')
+        for i in notfound:
+            store_notfound_address(i)
+        logging.debug('Cache and notfound stored.')
 
 
 def main():

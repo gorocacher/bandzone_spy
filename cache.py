@@ -15,6 +15,12 @@ class GeocodeItem(db.Model):
     location = db.GeoPtProperty()
     date = db.DateTimeProperty(auto_now=True)
 
+class NotFoundItem(db.Model):
+    """Models an individual not-found addresses."""
+    address = db.StringProperty()
+    date = db.DateTimeProperty(auto_now=True)
+
+
 def store_geocode(address, lat, lng):
     item = GeocodeItem.all().filter("address =", address).get()
     if item is None:
@@ -29,3 +35,15 @@ def get_geocodes():
         'lat': i.location.lat,
         'lng': i.location.lon}
     for i in GeocodeItem.all()]
+
+
+def store_notfound_address(address):
+    item = NotFoundItem.all().filter("address =", address).get()
+    if item is None:
+        item = NotFoundItem()
+        item.address = address
+        item.put()
+
+def get_notfound_addresses():
+    return [i.address for i in NotFoundItem.all()]
+

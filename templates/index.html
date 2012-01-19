@@ -87,13 +87,11 @@
                 afterCallbacks();
                 codeAddress(locations, i+1, notfound);
             }  else {
-                /*if ((notfound != null) && $.inArray(location.address, notfound)) {
-
-                    alert('previously not found: ' + location.address + )
+                if ((notfound != null) && ($.inArray(location.address, notfound) > -1)) {
                     afterCallbacks();
                     codeAddress(locations, i+1, notfound);
                     return;
-                }*/
+                }
 
                 geocoder.geocode( { 'address': location.address }, function(results, status) {
                     if (status == google.maps.GeocoderStatus.OK) {
@@ -107,8 +105,8 @@
                         });
 
 
-                        afterCallbacks();
-                        codeAddress(locations, i+1, notfound);
+                        //afterCallbacks();
+                        //codeAddress(locations, i+1, notfound);
                         /*setTimeout(function() {
                                 codeAddress(locations, i+1);
                             },200);*/
@@ -118,10 +116,14 @@
                         } else if (status == google.maps.GeocoderStatus.ZERO_RESULTS) {
                             notFoundCache.push(location.address);
                         }
-                        afterCallbacks();
+                        //afterCallbacks();
                         //alert("Geocode was not successful for the following reason: " + status);
-                        codeAddress(locations, i+1, notfound);
+                        //codeAddress(locations, i+1, notfound);
                     }
+                    afterCallbacks();
+                    setTimeout(function() {
+                        codeAddress(locations, i+1);
+                    },200);
                 });
             }
         }
