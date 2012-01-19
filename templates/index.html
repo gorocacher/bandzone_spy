@@ -18,7 +18,6 @@
             fans: ko.observableArray([])
         };
 
-
         var geocoder;
         var map;
         var infowindow;
@@ -30,7 +29,19 @@
         var numCallbacks = 0;
 
         function doStoreCache() {
-            server.StoreCache(locationCache, notFoundCache);
+            /** Since the cache is stored using GET requests, the data are sliced in order to fit in a single URL */
+            while(locationCache.length | notFoundCache.length) {
+                var locSlice = [];
+                var undefSlice = [];
+                if (locationCache.length)
+                    locSlice = locationCache.splice(0,25);
+                if (notFoundCache.length)
+                    undefSlice = notFoundCache.splice(0,25);
+
+                server.StoreCache(locSlice, undefSlice);
+            }
+
+
         }
 
         function createMarker(address, tooltip, latlng, proportion, zindex) {
@@ -92,7 +103,7 @@
                     codeAddress(locations, i+1, notfound);
                     return;
                 }
-
+                var timeout = 400;
                 geocoder.geocode( { 'address': location.address }, function(results, status) {
                     if (status == google.maps.GeocoderStatus.OK) {
                         var latlng = results[0].geometry.location;
@@ -113,6 +124,7 @@
                     } else {
                         if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
                             failedGeocodes++;
+                            timeout = 0;
                         } else if (status == google.maps.GeocoderStatus.ZERO_RESULTS) {
                             notFoundCache.push(location.address);
                         }
@@ -123,7 +135,7 @@
                     afterCallbacks();
                     setTimeout(function() {
                         codeAddress(locations, i+1);
-                    },200);
+                    },timeout);
                 });
             }
         }
@@ -178,13 +190,8 @@
         // Callback for after a successful doAdd
         function onSearchSuccess(response) {
             viewModel.fans.removeAll();
-            /*for (var i in response) {
-                viewModel.fans.push(response[i]);
-            }*/
-            alert("response: " + response.locations + ",\nnotfound: " + response.notfound);
+
             createMap(response.locations, response.notfound);
-
-
             $('#results').show();
         }
 
