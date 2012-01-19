@@ -23,12 +23,13 @@
         var infowindow;
         var latlngbounds;
         var markersArray = [];
+        var markersMap = new Array();
         var oldMarkersArray = [];
         var locationCache = [];
         var notFoundCache = [];
-        var numCallbacks = 0;
 
         var cacheSizeLimit = 10;
+
         function tryStoreCache() {
             if ((locationCache.length >= cacheSizeLimit) || (notFoundCache.length >= cacheSizeLimit)) {
                 doStoreCache();
@@ -58,6 +59,9 @@
             icon.scaledSize = new google.maps.Size(proportion * icon.size.width, proportion * icon.size.height);
             icon.size = icon.scaledSize
 
+            if (markersMap[address] != null)
+                markersMap[address].setMap(null);
+
             var marker = new google.maps.Marker({
                 map: map,
                 position: latlng,
@@ -66,6 +70,7 @@
                 icon: icon
             });
             markersArray.push(marker);
+            markersMap[address] = marker;
 
             google.maps.event.addListener(marker, 'click', function() {
                 if (infowindow)
@@ -77,33 +82,33 @@
             });
         }
 
-        function afterCallbacks() {
-            numCallbacks --;
-            if (numCallbacks == 0) {
-                //map.panToBounds(latlngbounds);
-                doStoreCache();
-                $('#loader').hide();
-                if (failedGeocodes > 0)  {
-                    alert('There was too many geocode request (' + failedGeocodes + '), therefore not all addresses will be displayed. Try again later.');
-                    failedGeocodes = 0;
-                }
+        var failedGeocodes = 0;
+        function finishCallbacks() {
+            doStoreCache();
+            $('#loader').hide();
+            if (failedGeocodes > 0)  {
+                alert('There was too many geocode request (' + failedGeocodes + '), therefore not all addresses will be displayed. Try again later.');
+                failedGeocodes = 0;
             }
         }
 
-        var failedGeocodes = 0;
+
         function codeAddress(locations, i, notfound) {
-            if (i >= locations.length)
+            if (i >= locations.length) {
+                finishCallbacks();
                 return;
+            }
+            if (!connected)
+                return;
+
             var location = locations[i];
 
             if ((location.lat != null) && (location.lng != null)) {
                 var latlng= new google.maps.LatLng(location.lat, location.lng);
                 createMarker(location.address, location.tooltip, latlng, location.proportion, location.zindex);
-                afterCallbacks();
                 codeAddress(locations, i+1, notfound);
             }  else {
                 if ((notfound != null) && ($.inArray(location.address, notfound) > -1)) {
-                    afterCallbacks();
                     codeAddress(locations, i+1, notfound);
                     return;
                 }
@@ -133,7 +138,6 @@
                             failedGeocodes++;
                         }
                     }
-                    afterCallbacks();
                     // continue after 300ms
                     setTimeout(function() {
                         codeAddress(locations, i+1);
@@ -175,7 +179,6 @@
             latlngbounds = new google.maps.LatLngBounds( );
             latlngbounds.extend(latlng);
 
-            numCallbacks = locations.length;
             codeAddress(locations, 0, notfound);
             /*for (var i in locations) {
                 if (locations[i].address != null) {
@@ -184,17 +187,58 @@
             }*/
         }
 
+        var channel;
+        var socket;
+        var opened;
         // Client function that calls a server rpc and provides a callback
         function doSearch() {
+            $('#results').hide();
+            $('#loader').show();
+
+            if (socket)
+                socket.close();
+
             server.Search($('#search_field').val(), onSearchSuccess);
         }
 
-        // Callback for after a successful doAdd
-        function onSearchSuccess(response) {
-            viewModel.fans.removeAll();
+        var connected;
 
-            createMap(response.locations, response.notfound);
-            $('#results').show();
+        onMessage = function(msg) {
+            var response = null;
+            try {
+                response = JSON.parse(msg.data);
+            } catch (e) {
+                response = msg.data;
+            }
+            codeAddress(response.locations, 0, response.notfound);
+        }
+
+        onOpened = function() {
+            connected = true;
+            createMap([], []);
+        };
+
+        onClose = function() {
+            connected = false;
+            $('#loader').hide();
+        };
+
+        // Callback for after a successful doAdd
+        function onSearchSuccess(status, response) {
+            if (status == 200) {
+                if (!channel)
+                    channel = new goog.appengine.Channel(response.token);
+                socket = channel.open();
+                socket.onopen = onOpened;
+                socket.onmessage = onMessage;
+                socket.onclose = onClose;
+
+                createMap(response.locations, response.notfound);
+                $('#results').show();
+            } else {
+                $('#loader').hide();
+                $('#error').fadeIn(400).delay(2000).fadeOut(400);
+            }
         }
 
         // Define the entry point
@@ -202,8 +246,6 @@
         {
 
             $("#search_button").click(function() {
-                $('#results').hide();
-                $('#loader').show();
                 doSearch();
                 return false;
             });
@@ -239,10 +281,10 @@
             ko.applyBindings(viewModel);
         </script>-->
 
-        <div id="map_canvas" style="width: 640px; height: 640px;">
+        <div id="map_canvas" style="width: 640px; height: 640px;">    </div>
     </div>
-
-
+    <div id="error" style="display: none;">
+        Application encountered an error.
     </div>
 
 {% endblock %}

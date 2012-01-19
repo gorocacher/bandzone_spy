@@ -12,6 +12,7 @@
     <script type="text/javascript" src="js/jquery.tmpl.js"></script>
     <script type="text/javascript" src="js/knockout-2.0.0.js"></script>
     <script type="text/javascript" src="./js/json2.js"></script>
+    <script type="text/javascript" src="/_ah/channel/jsapi"></script>
     <script type="text/javascript">
 
         //
@@ -61,14 +62,14 @@
 
             if (async) {
                 req.onreadystatechange = function() {
-                    if(req.readyState == 4 && req.status == 200) {
+                    if(req.readyState == 4 /*&& req.status == 200*/) {
                         var response = null;
                         try {
                             response = JSON.parse(req.responseText);
                         } catch (e) {
                             response = req.responseText;
                         }
-                        callback(response);
+                        callback(req.status, response);
                     }
                 }
             }
