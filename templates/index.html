@@ -85,16 +85,6 @@
         var failedGeocodes = 0;
         function finishCallbacks() {
             doStoreCache();
-            $('#loader').hide();
-            if (socket) {
-                socket.close();
-                socket = null;
-            }
-
-            if (failedGeocodes > 0)  {
-                alert('There was too many geocode request (' + failedGeocodes + '), therefore not all addresses will be displayed. Try again later.');
-                failedGeocodes = 0;
-            }
         }
 
 
@@ -134,7 +124,7 @@
                             // redo the current address  after 1s
                             setTimeout(function() {
                                 codeAddress(locations, i);
-                            },1000);
+                            },500);
                             return;
                         } else if (status == google.maps.GeocoderStatus.ZERO_RESULTS) {
                             notFoundCache.push(location.address);
@@ -144,9 +134,10 @@
                         }
                     }
                     // continue after 300ms
-                    setTimeout(function() {
+                    /*setTimeout(function() {
                         codeAddress(locations, i+1);
-                    },200);
+                    },200);*/
+                    codeAddress(locations, i+1);
                 });
             }
         }
@@ -188,6 +179,11 @@
 
         }
 
+        function displayError() {
+            $('#loader').hide();
+            $('#error').fadeIn(400).delay(2000).fadeOut(400);
+        }
+
         var channel;
         var socket;
         var opened;
@@ -209,11 +205,20 @@
                 response = msg.data;
             }
             if (response.finished == false) {
-                alert('new locations to process: ' + response.locations);
+                //alert('new locations to process: ' + response.locations);
                 codeAddress(response.locations, 0);
             } else {
                 socket.close();
-                alert('socket closed');
+                if (response.error) {
+                    displayError();
+                }
+
+                $('#loader').hide();
+                if (failedGeocodes > 0)  {
+                    alert('There was too many geocode request (' + failedGeocodes + '), therefore not all addresses will be displayed. Try again later.');
+                    failedGeocodes = 0;
+                }
+
             }
         }
 
@@ -221,14 +226,16 @@
             connected = true;
             createMap([], []);
             $('#results').show();
-            alert('connected');
+            //alert('connected');
         };
 
         onClose = function() {
             if (connected) {
                 connected = false;
                 $('#loader').hide();
+                socket = null;
             }
+            alert('socket closed');
         };
 
         function connectToServer() {
@@ -256,8 +263,7 @@
                 //createMap(response.locations, response.notfound);
 
             } else {
-                $('#loader').hide();
-                $('#error').fadeIn(400).delay(2000).fadeOut(400);
+                displayError();
             }
         }
 

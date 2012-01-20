@@ -1,11 +1,14 @@
+
 from google.appengine.ext import deferred
 from google.appengine.runtime import DeadlineExceededError
 from google.appengine.api import channel, urlfetch, memcache
 from django.utils import simplejson
 import logging
+import traceback
 from bzdataprocessor import aggregate_by_address, fillScaleAndTooltip
 from bzparser import BandzoneBandParser
 from cache import load_geo_from_cache
+
 
 
 class AsyncFanDownloader():
@@ -64,7 +67,7 @@ class AsyncFanHandler():
             if self.completeAddressMap.has_key(k):
                 #update both maps
                 self.completeAddressMap[k].count += self.currentAddressMap[k].count
-                self.completeAddressMap[k].fans.append(self.currentAddressMap[k].fans)
+                self.completeAddressMap[k].fans.extend(self.currentAddressMap[k].fans)
                 self.currentAddressMap[k].count = self.completeAddressMap[k].count
                 self.currentAddressMap[k].fans = self.completeAddressMap[k].fans
 
@@ -91,9 +94,22 @@ class AsyncFanHandler():
                 self.completeAddressMap[k] = self.currentAddressMap[k]
 
     def _get_message(self):
+        locations = [
+            {
+                'address': r.address,
+                'tooltip': r.tooltip,
+                'count': r.count,
+                'lat': r.lat,
+                'lng': r.lng,
+                'found': r.found,
+                'zindex': r.zindex,
+                'proportion': r.proportion
+            } for r in self.currentAddressMap.values()
+        ]
         msg = {
-            'locations': [r.__dict__ for r in self.currentAddressMap.values()],
-            'finished': False
+            'locations': locations,
+            'finished': False,
+            'error': False
         }
         return simplejson.dumps(msg)
 
@@ -102,9 +118,15 @@ class AsyncFanHandler():
         channel.send_message(self.client_id, msg)
         self.currentAddressMap = {}
 
+    def finishWithError(self):
+        """Called when the mapper has finished, to allow for any final work to be done."""
+        msg = {'finished': True, 'error': True}
+        msg = simplejson.dumps(msg)
+        channel.send_message(self.client_id, msg)
+
     def finish(self):
         """Called when the mapper has finished, to allow for any final work to be done."""
-        msg = {'finished': True}
+        msg = {'finished': True, 'error': False}
         msg = simplejson.dumps(msg)
         channel.send_message(self.client_id, msg)
 
@@ -118,8 +140,8 @@ class AsyncFanHandler():
         to_be_processed = start_page
         try:
             for page in range(start_page, self.total_pages):
-                logging.debug("Processing page: %d ------------------------" % page)
-                fans = AsyncFanDownloader().asyncDonwload(self.url_template, start_page, batch_size)
+                logging.info("Processing page: %d ------------------------" % page)
+                fans = AsyncFanDownloader().asyncDonwload(self.url_template, page, batch_size)
 
                 # The mapUpdate object is sent to the client to render the map.
                 self.currentAddressMap = aggregate_by_address(fans)
@@ -131,10 +153,9 @@ class AsyncFanHandler():
                 self._update_complete_map()
                 # fill scale and tooltip
                 self.maxcount = fillScaleAndTooltip(self.currentAddressMap, self.maxcount)
-
                 self._batch_write()
                 to_be_processed = page
-                logging.debug("Processing finished for: %d ------------------------" % page)
+                logging.info("Processing finished for: %d ------------------------" % page)
 
         except DeadlineExceededError:
             # sand any unfinished updates to the client.
@@ -142,7 +163,12 @@ class AsyncFanHandler():
             # Queue a new task to pick up where we left off.
             deferred.defer(self._continue, to_be_processed, batch_size)
             return
+        except BaseException:
+            logging.error(traceback.format_exc())
+            self.finishWithError()
+            return
         self.finish()
 
 
 
+logging.getLogger().setLevel(logging.DEBUG)
