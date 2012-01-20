@@ -4,6 +4,7 @@ from google.appengine.runtime import DeadlineExceededError
 from google.appengine.api import channel, urlfetch, memcache
 from django.utils import simplejson
 import logging
+import math
 import traceback
 from bzdataprocessor import aggregate_by_address, fillScaleAndTooltip
 from bzparser import BandzoneBandParser
@@ -130,7 +131,7 @@ class AsyncFanHandler():
         msg = simplejson.dumps(msg)
         channel.send_message(self.client_id, msg)
 
-    def run(self, batch_size=1):
+    def run(self, batch_size=5):
         """Starts the mapper running."""
         self.total_pages = AsyncFanDownloader().total_pages(self.url_template)
         logging.debug('Total pages: %d' % self.total_pages)
@@ -139,9 +140,10 @@ class AsyncFanHandler():
     def _continue(self, start_page, batch_size):
         to_be_processed = start_page
         try:
-            for page in range(start_page, self.total_pages):
-                logging.info("Processing page: %d ------------------------" % page)
-                fans = AsyncFanDownloader().asyncDonwload(self.url_template, page, batch_size)
+            while to_be_processed < self.total_pages:
+                logging.info("Processing page: %d ------------------------" % to_be_processed)
+                to_be_downloaded = min(self.total_pages - to_be_processed, batch_size)
+                fans = AsyncFanDownloader().asyncDonwload(self.url_template, to_be_processed, to_be_downloaded)
 
                 # The mapUpdate object is sent to the client to render the map.
                 self.currentAddressMap = aggregate_by_address(fans)
@@ -154,8 +156,8 @@ class AsyncFanHandler():
                 # fill scale and tooltip
                 self.maxcount = fillScaleAndTooltip(self.currentAddressMap, self.maxcount)
                 self._batch_write()
-                to_be_processed = page
-                logging.info("Processing finished for: %d ------------------------" % page)
+                logging.info("Processing finished for: %d ------------------------" % to_be_processed)
+                to_be_processed += batch_size
 
         except DeadlineExceededError:
             # sand any unfinished updates to the client.
