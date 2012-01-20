@@ -47,19 +47,22 @@ class BandzoneBandParser():
         """
         Parses the fan list in the left column of the page (if unfolded)
         """
-        soup = BeautifulSoup(html)
-        results = soup.find(id="snippet-fanList-fanList")
-        links = results.findAll(attrs={'title' : re.compile(u"Přejít na profil.*")})
-        items = []
-        for link in links:
-            fan = BandzoneFan()
-            fan.profileUrl = link['href']
-            fan.nickName = fan.profileUrl[5:]
-            img = link.first('img', attrs={'alt' : re.compile(u"Profilový obrázek.*")})
-            fan.avatarUrl = img['src']
-            fullName = link.find('h4', attrs={'class' :'title'})
-            fan.fullName = fullName.string
-            address = link.find('span', attrs={'class' :'city'})
-            fan.address = unicode(address.string)
-            items.append(fan)
-        return items
+        try:
+            soup = BeautifulSoup(html)
+            results = soup.find(id="snippet-fanList-fanList")
+            links = results.findAll(attrs={'title' : re.compile(u"Přejít na profil.*")})
+            items = []
+            for link in links:
+                fan = BandzoneFan()
+                fan.profileUrl = unicode(link['href'])
+                fan.nickName = unicode(fan.profileUrl[5:])
+                img = link.first('img', attrs={'alt' : re.compile(u"Profilový obrázek.*")})
+                fan.avatarUrl = unicode(img['src'])
+                fullName = link.find('h4', attrs={'class' :'title'})
+                fan.fullName = unicode(fullName.string)
+                address = link.find('span', attrs={'class' :'city'})
+                fan.address = unicode(address.string)
+                items.append(fan)
+            return items
+        except:
+            return []

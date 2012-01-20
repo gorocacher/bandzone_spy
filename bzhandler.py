@@ -43,8 +43,9 @@ class AsyncFanDownloader():
 
         data_list = []
         for key in chunks_dict.keys():
-            data_list= data_list + chunks_dict[key]
-            memcache.add(url_template % key, chunks_dict[key], 30*60)
+            partialResults = list(chunks_dict[key])
+            data_list.extend(partialResults)
+            #memcache.add((url_template % key), partialResults, 30*60)
         return data_list
 
     def total_pages(self, url):
@@ -132,7 +133,7 @@ class AsyncFanHandler():
         msg = simplejson.dumps(msg)
         channel.send_message(self.client_id, msg)
 
-    def run(self, batch_size=5):
+    def run(self, batch_size=2):
         """Starts the mapper running."""
         self.total_pages = AsyncFanDownloader().total_pages(self.url_template)
         logging.debug('Total pages: %d' % self.total_pages)
