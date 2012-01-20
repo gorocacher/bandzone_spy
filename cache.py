@@ -55,7 +55,7 @@ def load_geo_from_cache(address):
             'lng': item.location.lon,
             'found': True
         }
-    memcache.add(address, result, 60)
+    memcache.add(address, result, 30*60)
     return result
 
 

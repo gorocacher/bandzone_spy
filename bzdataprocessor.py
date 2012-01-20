@@ -49,16 +49,15 @@ def fillScaleAndTooltip(addressInfoMap, maxcount):
     for info in addressInfoMap.values():
         tooltipSnippets = ["<a href=\"http://www.bandzone.cz%s\" >%s</a></td></tr>\n" % ( fan.profileUrl, fan.fullName) \
                            for fan in info.fans]
-        info.tooltip = "<div>%s (%d)</div>" % (info.address, info.count) + "<table>" + ", ".join(tooltipSnippets) + "</table>"
+        info.tooltip = ", ".join(tooltipSnippets)
         #delattr(info, 'fans')
         if info.count > maxcount:
             maxcount = info.count
 
-    min_scale = 0.5
+    min_scale = 0.25
     max_scale = 2
     (scale_factor, logarithm_base) = compute_scale_factors(maxcount, min_scale, max_scale)
 
-    logging.info('scale factor = %d, info.count = %d, Max count = %d, log base =%d' % (scale_factor, info.count, maxcount, logarithm_base))
 
     for info in addressInfoMap.values():
         if logarithm_base == 1:

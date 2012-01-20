@@ -71,7 +71,7 @@ class AsyncFanHandler():
                 self.completeAddressMap[k].count += self.currentAddressMap[k].count
                 self.completeAddressMap[k].fans.extend(self.currentAddressMap[k].fans)
                 self.currentAddressMap[k].count = self.completeAddressMap[k].count
-                self.currentAddressMap[k].fans = self.completeAddressMap[k].fans
+                #self.currentAddressMap[k].fans = self.completeAddressMap[k].fans
 
 
     def _add_geocodes(self):
