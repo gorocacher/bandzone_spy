@@ -6,13 +6,14 @@ import logging
 import os
 
 from django.utils import simplejson
-from google.appengine.ext import webapp
+from google.appengine.ext import webapp, deferred
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
+from bzhandler import AsyncFanHandler
 from bzparser import BandzoneBandParser
 from bzdataprocessor import aggregate_by_address
 from cache import get_geocodes, store_geocode, store_notfound_address, get_notfound_addresses
-from google.appengine.api import urlfetch, memcache
+from google.appengine.api import urlfetch, memcache, channel
 
 from google.appengine.ext.webapp import template
 from cache import get_geocodes
@@ -62,52 +63,6 @@ class RPCHandler(webapp.RequestHandler):
         result = func(*args)
         self.response.out.write(simplejson.dumps(result))
 
-
-class AsyncFanDownloader():
-
-
-    def handle_result(self, rpc, page, storage):
-        result = rpc.get_result()
-        parser = BandzoneBandParser()
-        results = parser.parseFans(result.content)
-        storage[page] = results
-        logging.debug("Parsed fans for page %d:" % (page))
-        logging.debug([f.fullName for f in storage[page]])
-
-    def create_callback(self, rpc, page, storage):
-        return lambda: self.handle_result(rpc, page, storage)
-
-    def asyncDonwload(self, url_template, total_pages):
-        chunks_dict = {}
-        rpcs = []
-        for page in range(1, total_pages + 1):
-            url = url_template % page
-
-            data = memcache.get(url)
-            if data is not None:
-                logging.debug("Using cache for '%s'. *********************" % url)
-                chunks_dict[page] = data
-            else:
-                rpc = urlfetch.create_rpc(deadline = 10)
-                rpc.callback = self.create_callback(rpc, page, chunks_dict)
-                urlfetch.make_fetch_call(rpc, url)
-                rpcs.append(rpc)
-        for rpc in rpcs:
-            rpc.wait()
-
-        page_keys = chunks_dict.keys()
-        logging.debug("keys: ***************************")
-        logging.debug(page_keys)
-        data_list = []
-        for key in page_keys:
-            data_list= data_list + chunks_dict[key]
-            memcache.add(url_template % key, chunks_dict[key], 30*60)
-
-        logging.debug("data_list: ***************************")
-        logging.debug([[i.fullName, i.address] for i in data_list])
-        return data_list
-
-
 class RPCMethods:
     """ Defines the methods that can be RPCed.
     NOTE: Do not allow remote callers access to private/protected "_*" methods.
@@ -117,31 +72,20 @@ class RPCMethods:
         # The JSON encoding may have encoded integers as strings.
         # Be sure to convert args to any mandatory type(s).
         bandid = args[0]
-        url = "http://bandzone.cz/%s?fls=0&flp=%s" % (bandid, "%s")
-        totalPages = BandzoneBandParser().parseFanPageCount(urlfetch.fetch(url).content)
-        fans = AsyncFanDownloader().asyncDonwload(url, totalPages)
+        url_template = "http://bandzone.cz/%s?fls=0&flp=%s" % (bandid, "%s")
 
-        resultMap = aggregate_by_address(fans)
-        cache = get_geocodes()
-        #Now merge the parsed address data and the geocode cache
-        for c in cache:
-            address = c['address']
-            if resultMap.has_key(address):
-                resultMap[address].lat = c['lat']
-                resultMap[address].lng = c['lng']
-        return {
-            'locations': [r.__dict__ for r in resultMap.values()],
-            'notfound': get_notfound_addresses()
-            }
+        client_id = os.urandom(16).encode('hex')
+        token = channel.create_channel(client_id)
+        asyncHanler = AsyncFanHandler(url_template, client_id)
+        deferred.defer(asyncHanler.run)
+        return {'token': token}
 
     def StoreCache(self, *args):
         cache = args[0]
         notfound= args[1]
         logging.debug("Cache received:")
         logging.debug(cache)
-        logging.debug("Notfound received:")
         logging.debug(notfound)
-
         for i in cache:
             store_geocode(i['address'], i['lat'], i['lng'])
         for i in notfound:

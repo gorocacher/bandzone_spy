@@ -6,7 +6,7 @@ __author__ = 'Keznikl'
 
 
 from google.appengine.ext import db
-from google.appengine.api import users
+from google.appengine.api import users, memcache
 
 
 class GeocodeItem(db.Model):
@@ -29,13 +29,48 @@ def store_geocode(address, lat, lng):
         item.location = GeoPt(lat=lat, lon=lng)
         item.put()
 
-def get_geocodes():
-    return [{
-        'address': i.address,
-        'lat': i.location.lat,
-        'lng': i.location.lon}
-    for i in GeocodeItem.all()]
+def load_geo_from_cache(address):
+    result = memcache.get(address)
+    if result is not None:
+        return result
 
+    item = GeocodeItem.all().filter("address =", address).get()
+    if item is None:
+        item = NotFoundItem.all().filter("address =", address).get()
+        if item is None:
+            result = {
+                'lat': None,
+                'lng': None,
+                'found': None
+            }
+        else:
+            result = {
+                'lat': None,
+                'lng': None,
+                'found': False
+            }
+    else:
+        result = {
+            'lat': item.location.lat,
+            'lng': item.location.lon,
+            'found': True
+        }
+    memcache.add(address, result, 60)
+    return result
+
+
+
+
+def get_geocodes():
+    """
+    Returns map of {address: {lat: number, lng: number}}
+    """
+    ret = {}
+    for i in GeocodeItem.all():
+        ret[i.address] = {
+            'lat': i.location.lat,
+            'lng': i.location.lon
+        }
 
 def store_notfound_address(address):
     item = NotFoundItem.all().filter("address =", address).get()

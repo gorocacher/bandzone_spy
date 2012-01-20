@@ -13,6 +13,7 @@
         // Insert 'Search' as the name of a callable method
         InstallFunction(server, 'Search');
         InstallFunction(server, 'StoreCache');
+        InstallFunction(server, 'AskForData');
 
         var viewModel = {
             fans: ko.observableArray([])
@@ -22,9 +23,9 @@
         var map;
         var infowindow;
         var latlngbounds;
-        var markersArray = [];
+
         var markersMap = new Array();
-        var oldMarkersArray = [];
+        var oldMarkersMap = new Array();
         var locationCache = [];
         var notFoundCache = [];
 
@@ -69,7 +70,6 @@
                 zIndex: zindex,
                 icon: icon
             });
-            markersArray.push(marker);
             markersMap[address] = marker;
 
             google.maps.event.addListener(marker, 'click', function() {
@@ -86,6 +86,11 @@
         function finishCallbacks() {
             doStoreCache();
             $('#loader').hide();
+            if (socket) {
+                socket.close();
+                socket = null;
+            }
+
             if (failedGeocodes > 0)  {
                 alert('There was too many geocode request (' + failedGeocodes + '), therefore not all addresses will be displayed. Try again later.');
                 failedGeocodes = 0;
@@ -93,7 +98,7 @@
         }
 
 
-        function codeAddress(locations, i, notfound) {
+        function codeAddress(locations, i) {
             if (i >= locations.length) {
                 finishCallbacks();
                 return;
@@ -103,13 +108,13 @@
 
             var location = locations[i];
 
-            if ((location.lat != null) && (location.lng != null)) {
+            if ((location.found == true) && (location.lat != null) && (location.lng != null)) {
                 var latlng= new google.maps.LatLng(location.lat, location.lng);
                 createMarker(location.address, location.tooltip, latlng, location.proportion, location.zindex);
-                codeAddress(locations, i+1, notfound);
+                codeAddress(locations, i+1);
             }  else {
-                if ((notfound != null) && ($.inArray(location.address, notfound) > -1)) {
-                    codeAddress(locations, i+1, notfound);
+                if (location.found == false) {
+                    codeAddress(locations, i+1);
                     return;
                 }
 
@@ -148,17 +153,17 @@
 
         // Deletes all markers in the array by removing references to them
         function deleteOverlays() {
-            if (markersArray) {
-                oldMarkersArray = markersArray;
-                markersArray = []
-                for (i in oldMarkersArray) {
-                    oldMarkersArray[i].setMap(null);
+            if (markersMap) {
+                oldmarkersMap = markersMap;
+                markersMap = new Array();
+                for (i in oldmarkersMap) {
+                    oldmarkersMap[i].setMap(null);
                 }
-                oldMarkersArray = [];
+                oldmarkersMap = new Array();
             }
         }
 
-        function createMap(locations, notfound) {
+        function createMap(locations) {
             locationCache = [];
             notFoundCache = [];
             geocoder = new google.maps.Geocoder();
@@ -179,12 +184,8 @@
             latlngbounds = new google.maps.LatLngBounds( );
             latlngbounds.extend(latlng);
 
-            codeAddress(locations, 0, notfound);
-            /*for (var i in locations) {
-                if (locations[i].address != null) {
-                    codeAddress(locations[i]);
-                }
-            }*/
+            //codeAddress(locations, 0);
+
         }
 
         var channel;
@@ -194,14 +195,11 @@
         function doSearch() {
             $('#results').hide();
             $('#loader').show();
-
-            if (socket)
-                socket.close();
-
             server.Search($('#search_field').val(), onSearchSuccess);
         }
 
         var connected;
+        var token;
 
         onMessage = function(msg) {
             var response = null;
@@ -210,31 +208,53 @@
             } catch (e) {
                 response = msg.data;
             }
-            codeAddress(response.locations, 0, response.notfound);
+            if (response.finished == false) {
+                alert('new locations to process: ' + response.locations);
+                codeAddress(response.locations, 0);
+            } else {
+                socket.close();
+                alert('socket closed');
+            }
         }
 
         onOpened = function() {
             connected = true;
             createMap([], []);
+            $('#results').show();
+            alert('connected');
         };
 
         onClose = function() {
-            connected = false;
-            $('#loader').hide();
+            if (connected) {
+                connected = false;
+                $('#loader').hide();
+            }
         };
+
+        function connectToServer() {
+            if (!channel)
+                channel = new goog.appengine.Channel(token);
+
+            if (socket)
+                socket.close();
+
+            socket = channel.open();
+            socket.onopen = onOpened;
+            socket.onmessage = onMessage;
+            socket.onclose = onClose;
+
+        }
 
         // Callback for after a successful doAdd
         function onSearchSuccess(status, response) {
             if (status == 200) {
-                if (!channel)
-                    channel = new goog.appengine.Channel(response.token);
-                socket = channel.open();
-                socket.onopen = onOpened;
-                socket.onmessage = onMessage;
-                socket.onclose = onClose;
+                if (response.token) {
+                    token = response.token
+                    connectToServer();
 
-                createMap(response.locations, response.notfound);
-                $('#results').show();
+                }
+                //createMap(response.locations, response.notfound);
+
             } else {
                 $('#loader').hide();
                 $('#error').fadeIn(400).delay(2000).fadeOut(400);

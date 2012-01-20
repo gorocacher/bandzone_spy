@@ -21,3 +21,6 @@ handlers:
 
 - url: .*
   script: main.py
+
+builtins:
+- deferred: on

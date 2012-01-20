@@ -1,5 +1,7 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+
 __author__ = 'Keznikl'
 
 import re
@@ -60,6 +62,6 @@ class BandzoneBandParser():
             fullName = link.find('h4', attrs={'class' :'title'})
             fan.fullName = fullName.string
             address = link.find('span', attrs={'class' :'city'})
-            fan.address = address.string
+            fan.address = unicode(address.string)
             items.append(fan)
         return items

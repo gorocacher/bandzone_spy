@@ -8,12 +8,13 @@ from __builtin__ import delattr
 
 
 class AddressInfo():
-    def __init__(self, address=None, tooltip='', count=0, lat = None, lng = None):
+    def __init__(self, address=None, tooltip='', count=0, lat = None, lng = None, found = False):
         self.address = address
         self.tooltip = tooltip
         self.count = count
         self.lat = lat
         self.lng = lng
+        self.found = found
         self.fans = []
 
 
@@ -27,7 +28,7 @@ def compute_scale_factors(max_count, min_scale, max_scale):
     scale_factor = nth_root(math.pow(max_count, root) * (max_count + 1) / math.pow(2.0, max_scale/min_scale), root)
     # logarith_base = (2scale_factor / max_count)^2)
     logarith_base= math.pow(2*scale_factor / max_count, 1/min_scale)
-    return (scale_factor, logarith_base)
+    return scale_factor, logarith_base
 
 def aggregate_by_address(fans):
     infos = {}
@@ -39,24 +40,22 @@ def aggregate_by_address(fans):
         info = infos[fan.address]
         info.fans.append(fan)
         info.count += 1
+    return infos
 
-    result = {}
-    maxcount = 0
-    for address in infos.keys():
-        info = infos[address]
+def fillScaleAndTooltip(addressInfoMap, maxcount):
+    for info in addressInfoMap.values():
         tooltipSnippets = ["<a href=\"http://www.bandzone.cz%s\" >%s</a></td></tr>\n" % ( fan.profileUrl, fan.fullName) \
                            for fan in info.fans]
-        info.tooltip = "<div>%s (%d)</div>" % (address, info.count) + "<table>" + ", ".join(tooltipSnippets) + "</table>"
+        info.tooltip = "<div>%s (%d)</div>" % (info.address, info.count) + "<table>" + ", ".join(tooltipSnippets) + "</table>"
         delattr(info, 'fans')
         if info.count > maxcount:
             maxcount = info.count
-        result[address] = info
 
     min_scale = 0.5
     max_scale = 2
-    (scale_factor, logarith_base) = compute_scale_factors(maxcount, min_scale, max_scale)
+    scale_factor, logarithm_base = compute_scale_factors(maxcount, min_scale, max_scale)
 
-    for info in result.values():
-        info.proportion = math.log(scale_factor * (1 + float(info.count)) / float(maxcount), logarith_base)
+    for info in addressInfoMap.values():
+        info.proportion = math.log(scale_factor * (1 + float(info.count)) / float(maxcount), logarithm_base)
         info.zindex = maxcount - info.count
-    return result
+    return maxcount
