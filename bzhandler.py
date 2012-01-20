@@ -94,7 +94,7 @@ class AsyncFanHandler():
             if not self.completeAddressMap.has_key(k):
                 self.completeAddressMap[k] = self.currentAddressMap[k]
 
-    def _get_message(self):
+    def _get_message(self, percent):
         locations = [
             {
                 'address': r.address,
@@ -110,12 +110,13 @@ class AsyncFanHandler():
         msg = {
             'locations': locations,
             'finished': False,
-            'error': False
+            'error': False,
+            'percent': percent
         }
         return simplejson.dumps(msg)
 
-    def _batch_write(self):
-        msg = self._get_message()
+    def _batch_write(self, percent):
+        msg = self._get_message(percent)
         channel.send_message(self.client_id, msg)
         self.currentAddressMap = {}
 
@@ -144,6 +145,7 @@ class AsyncFanHandler():
                 logging.info("Processing page: %d ------------------------" % to_be_processed)
                 to_be_downloaded = min(self.total_pages - to_be_processed, batch_size)
                 fans = AsyncFanDownloader().asyncDonwload(self.url_template, to_be_processed, to_be_downloaded)
+                logging.info("Donwload finished for pages %d-%d" % (to_be_processed, to_be_processed + to_be_downloaded -1))
 
                 # The mapUpdate object is sent to the client to render the map.
                 self.currentAddressMap = aggregate_by_address(fans)
@@ -155,13 +157,16 @@ class AsyncFanHandler():
                 self._update_complete_map()
                 # fill scale and tooltip
                 self.maxcount = fillScaleAndTooltip(self.currentAddressMap, self.maxcount)
-                self._batch_write()
+
                 logging.info("Processing finished for: %d ------------------------" % to_be_processed)
                 to_be_processed += batch_size
+                self._batch_write((100*to_be_processed)/self.total_pages)
+
+
 
         except DeadlineExceededError:
             # sand any unfinished updates to the client.
-            self._batch_write()
+            self._batch_write((100*to_be_processed)/self.total_pages)
             # Queue a new task to pick up where we left off.
             deferred.defer(self._continue, to_be_processed, batch_size)
             return

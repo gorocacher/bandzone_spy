@@ -38,7 +38,7 @@ def load_geo_from_cache(address):
     if item is None:
         item = NotFoundItem.all().filter("address =", address).get()
         if item is None:
-            result = {
+            return {
                 'lat': None,
                 'lng': None,
                 'found': None

@@ -207,6 +207,7 @@
             if (response.finished == false) {
                 //alert('new locations to process: ' + response.locations);
                 codeAddress(response.locations, 0);
+                $('#percent').text(response.percent + '%');
             } else {
                 socket.close();
                 if (response.error) {
@@ -288,6 +289,7 @@
     </div>
     <div id="loader" style="display: none;">
         <img src="img/ajax-loader.gif" alt="loader"/>
+        <div id="percent"></div>
     </div>
     <div id="results" style="display: none; text-align: center;">
         <!--<table>
