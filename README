@@ -1,1 +1,4 @@
-This file was created by IntelliJ IDEA 11.0 for binding GitHub repository
+Application crawling the www.bandzone.cz portal and displaying aggregated information.
+
+Current functions:
+- displays fans of a band on google maps
