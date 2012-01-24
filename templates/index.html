@@ -202,6 +202,7 @@
         // Client function that calls a server rpc and provides a callback
         function doSearch() {
             $('#results').hide();
+            $('#search').hide();
             $('#loader').show();
             server.Search($('#search_field').val(), onSearchSuccess);
         }
@@ -248,7 +249,7 @@
                 $('#loader').hide();
                 socket = null;
             }
-            alert('socket closed');
+            //alert('socket closed');
         };
 
         function connectToServer() {
@@ -296,8 +297,11 @@
     <h1>Search Fans</h1>
 
     <div id="search">
-        <div class="input"><input type="text" id="search_field" name="search_field" class="text" autocomplete="off"/></div>
-        <a id="search_button" title="Search Fans" href="#"><span>Search</span></a>
+        <div class="input"><input type="text" id="search_field" name="search_field" class="text" autocomplete="off"/>
+        <a id="search_button" title="Search Fans" href="#"><span>Search</span></a></div>
+    </div>
+    <div id="error" style="display: none;">
+        Application encountered an error.
     </div>
     <div id="loader" style="display: none;">
         <img src="img/ajax-loader.gif" alt="loader"/>
@@ -323,8 +327,6 @@
 
         <div id="map_canvas" style="width: 640px; height: 640px;">    </div>
     </div>
-    <div id="error" style="display: none;">
-        Application encountered an error.
-    </div>
+
 
 {% endblock %}

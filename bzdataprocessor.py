@@ -54,7 +54,7 @@ def fillScaleAndTooltip(addressInfoMap, maxcount):
         if info.count > maxcount:
             maxcount = info.count
 
-    min_scale = 0.25
+    min_scale = 0.4
     max_scale = 2
     (scale_factor, logarithm_base) = compute_scale_factors(maxcount, min_scale, max_scale)
 
