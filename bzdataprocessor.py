@@ -1,14 +1,33 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
-import logging
-import math
+from __builtin__ import float
 
 __author__ = 'Keznikl'
 
-from __builtin__ import delattr
+import math
 
+"""
+Methods for transforming list of fans to a list of addresses with aggregated data (AddressInfo).
+"""
 
 class AddressInfo():
+    """Aggregated data for a single address.
+
+    Can contain only partial data, specific for a part of the band fans currently processed.
+    The partial data is completed on the client side.
+
+    Attributes:
+        address (str): The address.
+        tooltip (str): The names and profile URLs of the (subset of) fans with this address.
+        count (int): The number of the (subset of) fans with this address.
+        lat (float): Latitude of the address.
+        lng (float): Longitude of the address.
+        found (bool): True if the position of the address address was found by a Geocode service and was in the
+            geocode cache, False if not found by the Geocode service but in cache, None otherwise.
+        fans (list[bzparser.BandzoneFan]): A list of the (subset of) fans with this address.
+        zindex (int): The z-index of the marker for this address (based on the count).
+        proportion (float): The proportion of the marker (based on the count).
+    """
     def __init__(self, address=None, tooltip='', count=0, lat = None, lng = None, found = False):
         self.address = address
         self.tooltip = tooltip
@@ -47,7 +66,7 @@ def aggregate_by_address(fans):
 
 def fillScaleAndTooltip(addressInfoMap, maxcount):
     for info in addressInfoMap.values():
-        tooltipSnippets = ["<a href=\"http://www.bandzone.cz%s\" >%s</a></td></tr>\n" % ( fan.profileUrl, fan.fullName) \
+        tooltipSnippets = ["<a href=\"http://www.bandzone.cz%s\" >%s</a>\n" % ( fan.profileUrl, fan.fullName) \
                            for fan in info.fans]
         info.tooltip = ", ".join(tooltipSnippets)
         #delattr(info, 'fans')
