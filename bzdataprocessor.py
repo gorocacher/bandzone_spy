@@ -1,14 +1,14 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
-from __builtin__ import float
-
-__author__ = 'Keznikl'
-
-import math
 
 """
 Methods for transforming list of fans to a list of addresses with aggregated data (AddressInfo).
 """
+
+__author__ = 'Keznikl'
+
+from __builtin__ import float
+import math
 
 class AddressInfo():
     """Aggregated data for a single address.
