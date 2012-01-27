@@ -1,5 +1,9 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Methods and classes for parsing a given band-profile HTML.
+"""
+
 __author__ = 'Keznikl'
 
 import re
@@ -24,8 +28,18 @@ class BandzoneFan():
 
 
 def parseFanPageCount(html):
-    """
-    Parses the number of pages showing the fans of a band profile (if unfolded)
+    """Parses the number of pages containing the fans of a given band profile.
+
+    The  fan list in the band profile is expected to be unfolded in the given html.
+
+    Args:
+        html (str): The HTML page to be parsed.
+
+    Returns (int):
+        The nuber of fan-list pages.
+
+    Raises:
+        TODO various errors when the given html cannot be parsed.
     """
     soup = BeautifulSoup(html)
     result = soup.find(id="snippet-fanList-pagingControl-pagingControl")\
@@ -33,8 +47,18 @@ def parseFanPageCount(html):
     return int(result["data-paginator-pages"])
 
 def parseFanCount(html):
-    """
-    Parses the number of fans of a band profile (if unfolded)
+    """Parses the number of fans of a band profile.
+
+    The  fan list in the band profile is expected to be unfolded in the given html.
+
+    Args:
+        html (str): The HTML page to be parsed.
+
+    Returns (int):
+        The number of fans of the band.
+
+    Raises:
+        TODO various errors when the given html cannot be parsed.
     """
     soup = BeautifulSoup(html)
     result = soup.find(id="snippet-fanList-pagingControl-pagingControl")\
@@ -43,7 +67,18 @@ def parseFanCount(html):
 
 def parseFans(html):
     """
-    Parses the fan list in the left column of the page (if unfolded)
+    Parses the fans listed on the bands profile.
+
+    The  fan list in the band profile is expected to be unfolded in the given html.
+
+    Args:
+        html (str): The HTML page to be parsed.
+
+    Returns (list[BandzoneFan]):
+    The list of fans listed on the band profile.
+
+    Raises:
+    TODO various errors when the given html cannot be parsed.
     """
     try:
         soup = BeautifulSoup(html)
@@ -51,16 +86,16 @@ def parseFans(html):
         links = results.findAll(attrs={'title' : re.compile(u"Přejít na profil.*")})
         items = []
         for link in links:
-            fan = BandzoneFan()
-            fan.profileUrl = unicode(link['href'])
-            fan.nickName = unicode(fan.profileUrl[5:])
-            img = link.first('img', attrs={'alt' : re.compile(u"Profilový obrázek.*")})
-            fan.avatarUrl = unicode(img['src'])
-            fullName = link.find('h4', attrs={'class' :'title'})
-            fan.fullName = unicode(fullName.string)
-            address = link.find('span', attrs={'class' :'city'})
-            fan.address = unicode(address.string)
-            items.append(fan)
+           fan = BandzoneFan()
+           fan.profileUrl = unicode(link['href'])
+           fan.nickName = unicode(fan.profileUrl[5:])
+           img = link.first('img', attrs={'alt' : re.compile(u"Profilový obrázek.*")})
+           fan.avatarUrl = unicode(img['src'])
+           fullName = link.find('h4', attrs={'class' :'title'})
+           fan.fullName = unicode(fullName.string)
+           address = link.find('span', attrs={'class' :'city'})
+           fan.address = unicode(address.string)
+           items.append(fan)
         return items
     except:
         return []
