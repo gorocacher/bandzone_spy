@@ -65,6 +65,8 @@ def compute_scale_factors(max_count, min_scale, max_scale):
         A pair of (scale_factor, logarithm_base) for computing AddressInfo.proportion.
         The actual values are result of curve fitting.
     """
+    if max_count == 1:
+        return (1, 2)
     root = (max_scale / min_scale) - 1  # grade of the employed root
 
     # scale_factor = root-th root of (max_count^root * (max_count + 1) / 2^(root+1))
@@ -73,8 +75,8 @@ def compute_scale_factors(max_count, min_scale, max_scale):
         root
     )
 
-    logarith_base= (2*scale_factor / max_count)**(1/min_scale)
-    return (scale_factor, logarith_base)
+    logarithm_base= (2*scale_factor / max_count)**(1/min_scale)
+    return (scale_factor, logarithm_base)
 
 def aggregate_by_address(fans):
     """Aggregates fans according to their address.

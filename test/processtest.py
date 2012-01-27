@@ -32,7 +32,7 @@ class ProcessTestCase(unittest.TestCase):
         min_scale = 0.5
         max_scale = 2
         max_count = 1
-        (scale_factor, logarith_base) = compute_scale_factors(max_count, min_scale, max_scale)
-        self.assertNotEqual(0, scale_factor)
-        self.assertNotEqual(1, logarith_base)
-        self.assertAlmostEqual(min_scale, math.log(scale_factor  * 2.0 / max_count, logarith_base))
+        (scale_factor, logarithm_base) = compute_scale_factors(max_count, min_scale, max_scale)
+        self.assertNotAlmostEqual(0.0, scale_factor)
+        self.assertNotAlmostEqual(1.0, logarithm_base)
+        self.assertAlmostEqual(1.0, math.log(scale_factor  * 2.0 / max_count, logarithm_base))
