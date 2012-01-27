@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Methods and classes for parsing a given band-profile HTML.
+Uses the BeautifulSoup parsing library.
 """
 
 __author__ = 'Keznikl'
