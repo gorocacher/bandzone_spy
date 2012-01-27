@@ -7,7 +7,7 @@ import logging
 import math
 import traceback
 from bzdataprocessor import aggregate_by_address, fillScaleAndTooltip
-from bzparser import BandzoneBandParser
+from bzparser import parseFanPageCount, parseFans
 from cache import load_geo_from_cache
 
 
@@ -15,8 +15,7 @@ from cache import load_geo_from_cache
 class AsyncFanDownloader():
     def handle_result(self, rpc, page, storage):
         result = rpc.get_result()
-        parser = BandzoneBandParser()
-        results = parser.parseFans(result.content)
+        results = parseFans(result.content)
         storage[page] = results
 
 
@@ -26,7 +25,7 @@ class AsyncFanDownloader():
     def asyncDonwload(self, url_template, start_page, num_pages):
         chunks_dict = {}
         rpcs = []
-        for page in range(0, num_pages):
+        for page in xrange(0, num_pages):
             page += start_page + 1 # pages on  bz are numbered from 1
             url = url_template % page
 
@@ -49,7 +48,7 @@ class AsyncFanDownloader():
         return data_list
 
     def total_pages(self, url):
-        return BandzoneBandParser().parseFanPageCount(urlfetch.fetch(url).content)
+        return parseFanPageCount(urlfetch.fetch(url).content)
 
 
 

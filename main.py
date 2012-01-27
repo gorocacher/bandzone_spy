@@ -10,13 +10,10 @@ from google.appengine.ext import webapp, deferred
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp import util
 from bzhandler import AsyncFanHandler
-from bzparser import BandzoneBandParser
-from bzdataprocessor import aggregate_by_address
-from cache import get_geocodes, store_geocode, store_notfound_address, get_notfound_addresses
-from google.appengine.api import urlfetch, memcache, channel
+from cache import store_geocode, store_notfound_address
+from google.appengine.api import channel
 
 from google.appengine.ext.webapp import template
-from cache import get_geocodes
 
 
 template.register_template_library('templatetags.verbatim_templatetag')
