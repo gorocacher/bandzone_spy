@@ -1,6 +1,6 @@
 ---
 layout : layout
-title : code52
+title : BandzoneSpy
 ---
 
 
@@ -51,7 +51,7 @@ title : code52
         query += 'url' + i + '=' + encodeURIComponent(links[i].href) + '&';
     }
     }
-    document.write('<script charset="utf-8" type="text/javascript" src="http://disqus.com/forums/code52/get_num_replies.js' + query + '"></' + 'script>');
+    document.write('<script charset="utf-8" type="text/javascript" src="http://disqus.com/forums/kezniklgithub/get_num_replies.js' + query + '"></' + 'script>');
 })();
 //]]>
 </script>
