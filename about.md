@@ -1,6 +1,6 @@
 ---
 layout: post
-title: About
+title: O projektu
 comments: false
 ---
 
