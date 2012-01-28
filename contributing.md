@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Contributing to the Bandzone  project
+title: Contributing to the BandzoneSpy project
 ---
 **This page is borrowed from the [code52](http://code52.org/) project site, since the actions are similar in case of BandzoneSpy**
 
