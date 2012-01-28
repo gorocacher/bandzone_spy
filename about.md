@@ -21,7 +21,7 @@ Moje cíle jsou:
  - naučit se nové technologie.
  - přispět k použitelnosti Bandzone (?).
 
-## Jak to funguje
+## Jak to funguje?
 Celá aplikace je koncipována jako cloudová aplikace v prostředí [Google AppEngine](https://appengine.google.com/), kde serverová část je orientována na Python a klientská na HTML + JavaScript. 
  
 ##Progress
