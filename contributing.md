@@ -2,6 +2,7 @@
 layout: post
 title: Contributing to Code52 projects
 ---
+**This page is borrowed from the [code52](http://code52.org/) project site, since the actions are similar in case of BandzoneSpy**
 
 ##Getting ready to contribute
 ***For a detailed list of getting started links, head to the [Code52 wiki](https://github.com/Code52/code52.github.com/wiki)***
