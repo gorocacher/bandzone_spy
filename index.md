@@ -3,7 +3,7 @@ layout : layout
 title : code52
 ---
 
-{% include latest_project.html %}
+
 
 <ul class="ideas">
     {% for post in site.posts %}
