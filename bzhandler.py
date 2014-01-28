@@ -4,7 +4,6 @@ from google.appengine.runtime import DeadlineExceededError
 from google.appengine.api import channel, urlfetch, memcache
 from django.utils import simplejson
 import logging
-import math
 import traceback
 from bzdataprocessor import aggregate_by_address, fillScaleAndTooltip
 from bzparser import parseFanPageCount, parseFans

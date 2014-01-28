@@ -8,6 +8,7 @@ Uses the BeautifulSoup parsing library.
 __author__ = 'Keznikl'
 
 import re
+import logging
 from BeautifulSoup import BeautifulSoup
 
 class BandzoneFan():
@@ -87,16 +88,20 @@ def parseFans(html):
         links = results.findAll(attrs={'title' : re.compile(u"Přejít na profil.*")})
         items = []
         for link in links:
-           fan = BandzoneFan()
-           fan.profileUrl = unicode(link['href'])
-           fan.nickName = unicode(fan.profileUrl[5:])
-           img = link.first('img', attrs={'alt' : re.compile(u"Profilový obrázek.*")})
-           fan.avatarUrl = unicode(img['src'])
-           fullName = link.find('h4', attrs={'class' :'title'})
-           fan.fullName = unicode(fullName.string)
-           address = link.find('span', attrs={'class' :'city'})
-           fan.address = unicode(address.string)
-           items.append(fan)
+            try:
+                fan = BandzoneFan()
+                fan.profileUrl = unicode(link['href'])
+                fan.nickName = unicode(fan.profileUrl[5:])
+                img = link.first('img', attrs={'alt' : re.compile(u"Profilový obrázek.*")})
+                fan.avatarUrl = unicode(img['src'])
+                fullName = link.find('h4', attrs={'class' :'title cutter'})
+                fan.fullName = unicode(fullName.string)
+                address = link.find('span', attrs={'class' :'city cutter'})
+                fan.address = unicode(address.string)
+                items.append(fan)
+            except Exception as e:
+                logging.warn("Couldn't parse " + fan.profileUrl + " because of " + str(e))
+                continue
         return items
     except:
         return []

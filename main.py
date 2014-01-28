@@ -6,14 +6,13 @@ import logging
 import os
 
 from django.utils import simplejson
+import webapp2
 from google.appengine.ext import webapp, deferred
 from google.appengine.ext.webapp import template
-from google.appengine.ext.webapp import util
 from bzhandler import AsyncFanHandler
 from cache import store_geocode, store_notfound_address
 from google.appengine.api import channel
 
-from google.appengine.ext.webapp import template
 
 
 template.register_template_library('templatetags.verbatim_templatetag')
@@ -27,38 +26,6 @@ class MainPage(webapp.RequestHandler):
         template_values = { 'title':'Bandzone SPY', }
         self.response.out.write(template.render(template_path("index.html"), template_values))
 
-
-class RPCHandler(webapp.RequestHandler):
-    """ Allows the functions defined in the RPCMethods class to be RPCed."""
-    def __init__(self):
-        webapp.RequestHandler.__init__(self)
-        self.methods = RPCMethods()
-
-    def get(self):
-        func = None
-
-        action = self.request.get('action')
-        if action:
-            if action[0] == '_':
-                self.error(403) # access denied
-                return
-            else:
-                func = getattr(self.methods, action, None)
-
-        if not func:
-            self.error(404) # file not found
-            return
-
-        args = ()
-        while True:
-            key = 'arg%d' % len(args)
-            val = self.request.get(key)
-            if val:
-                args += (simplejson.loads(val),)
-            else:
-                break
-        result = func(*args)
-        self.response.out.write(simplejson.dumps(result))
 
 class RPCMethods:
     """ Defines the methods that can be RPCed.
@@ -90,13 +57,40 @@ class RPCMethods:
         logging.debug('Cache and notfound stored.')
 
 
-def main():
-    logging.getLogger().setLevel(logging.DEBUG)
-    app = webapp.WSGIApplication([
-        ('/', MainPage),
-        ('/rpc', RPCHandler),
-    ], debug=True)
-    util.run_wsgi_app(app)
+class RPCHandler(webapp.RequestHandler):
+    """ Allows the functions defined in the RPCMethods class to be RPCed."""
+    methods = RPCMethods()
 
-if __name__ == '__main__':
-    main()
+    def get(self):
+        func = None
+
+        action = self.request.get('action')
+        if action:
+            if action[0] == '_':
+                self.error(403) # access denied
+                return
+            else:
+                func = getattr(self.methods, action, None)
+
+        if not func:
+            self.error(404) # file not found
+            return
+
+        args = ()
+        while True:
+            key = 'arg%d' % len(args)
+            val = self.request.get(key)
+            if val:
+                args += (simplejson.loads(val),)
+            else:
+                break
+            
+        result = func(*args)
+        self.response.out.write(simplejson.dumps(result))
+
+logging.getLogger().setLevel(logging.DEBUG)
+app = webapp2.WSGIApplication([
+    ('/', MainPage),
+    ('/rpc', RPCHandler),
+], debug=True)
+
